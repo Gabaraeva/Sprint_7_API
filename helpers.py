@@ -1,12 +1,15 @@
 import requests
 import random
 import string
+import allure
+from urls import Urls
 
 
 def generate_random_string(length=10):
     return ''.join(random.choices(string.ascii_lowercase, k=length))
 
 
+@allure.step("Регистрация нового курьера")
 def register_new_courier():
     login = generate_random_string()
     password = generate_random_string()
@@ -19,7 +22,7 @@ def register_new_courier():
     }
 
     response = requests.post(
-        'https://qa-scooter.praktikum-services.ru/api/v1/courier',
+        Urls.CREATE_COURIER,
         data=payload
     )
 
@@ -33,40 +36,34 @@ def register_new_courier():
     return {"response": response}
 
 
+@allure.step("Авторизация курьера")
 def login_courier(login, password):
     return requests.post(
-        'https://qa-scooter.praktikum-services.ru/api/v1/courier/login',
+        Urls.LOGIN_COURIER,
         data={"login": login, "password": password}
     )
 
 
+@allure.step("Удаление курьера")
 def delete_courier(courier_id):
     return requests.delete(
-        f'https://qa-scooter.praktikum-services.ru/api/v1/courier/{courier_id}'
+        f"{Urls.DELETE_COURIER}{courier_id}"
     )
 
 
+@allure.step("Создание заказа")
 def create_order(color=None):
-    payload = {
-        "firstName": "Иван",
-        "lastName": "Иванов",
-        "address": "Москва, Кремль, 1",
-        "metroStation": 4,
-        "phone": "+79999999999",
-        "rentTime": 5,
-        "deliveryDate": "2025-07-20",
-        "comment": "Комментарий",
-    }
+    from data import TestData
+    payload = TestData.ORDER_DATA.copy()
+
     if color:
         payload["color"] = color
     return requests.post(
-        'https://qa-scooter.praktikum-services.ru/api/v1/orders',
+        Urls.CREATE_ORDER,
         json=payload
     )
 
 
+@allure.step("Получение списка заказов")
 def get_orders_list():
-    return requests.get('https://qa-scooter.praktikum-services.ru/api/v1/orders')
-
-
-
+    return requests.get(Urls.ORDERS_LIST)

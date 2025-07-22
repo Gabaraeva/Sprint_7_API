@@ -1,35 +1,33 @@
 import pytest
 import allure
 import requests
-from helpers import register_new_courier, login_courier, delete_courier, generate_random_string
+from helpers import generate_random_string
+from urls import Urls
+from data import TestData
 
 
 @allure.feature('Courier Creation')
 class TestCourierCreation:
     @allure.title('Successful courier creation')
-    def test_create_courier_success(self):
-        courier = register_new_courier()
-        assert courier.get('login'), "Courier not created"
-        response = courier['response']
-        assert response.status_code == 201
-        assert response.json() == {"ok": True}
-
-        login_resp = login_courier(courier['login'], courier['password'])
-        courier_id = login_resp.json()['id']
-        delete_courier(courier_id)
+    def test_create_courier_success(self, authenticated_courier, delete_courier_after_test):
+        # Фикстура создает курьера и автоматически удалит его после теста
+        assert authenticated_courier["id"] > 0
 
     @allure.title('Duplicate courier creation')
-    def test_create_duplicate_courier(self):
-        courier = register_new_courier()
-        assert courier.get('login'), "Initial courier not created"
+    def test_create_duplicate_courier(self, authenticated_courier, delete_courier_after_test):
+        # Пытаемся создать дубликат курьера
+        payload = {
+            "login": authenticated_courier["login"],
+            "password": "any_password",
+            "firstName": "any_name"
+        }
 
-        duplicate_response = register_new_courier()['response']
-        assert duplicate_response.status_code == 409
-        assert "уже существует" in duplicate_response.json()["message"]
-
-        login_resp = login_courier(courier['login'], courier['password'])
-        courier_id = login_resp.json()['id']
-        delete_courier(courier_id)
+        response = requests.post(
+            Urls.CREATE_COURIER,
+            data=payload
+        )
+        assert response.status_code == 409
+        assert TestData.ALREADY_EXISTS_ERROR in response.json()["message"]
 
     @pytest.mark.parametrize('field', ['login', 'password', 'firstName'])
     @allure.title('Missing required field: {field}')
@@ -42,8 +40,8 @@ class TestCourierCreation:
         del data[field]
 
         response = requests.post(
-            'https://qa-scooter.praktikum-services.ru/api/v1/courier',
+            Urls.CREATE_COURIER,
             data=data
         )
         assert response.status_code == 400
-        assert "недостаточно данных" in response.json()["message"]
+        assert TestData.MISSING_DATA_ERROR in response.json()["message"]

@@ -1,14 +1,15 @@
 import pytest
 import allure
 from helpers import create_order, get_orders_list
+from data import TestData
 
 @allure.feature('Order Management')
 class TestOrder:
     @pytest.mark.parametrize('color', [
-        ["BLACK"],
-        ["GREY"],
-        ["BLACK", "GREY"],
-        None
+        TestData.COLOR_BLACK,
+        TestData.COLOR_GREY,
+        TestData.BOTH_COLORS,
+        TestData.NO_COLOR
     ])
     @allure.title('Create order with colors: {color}')
     def test_create_order_with_colors(self, color):

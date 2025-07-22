@@ -1,19 +1,16 @@
 import pytest
 import allure
 import requests
-from helpers import register_new_courier, login_courier, delete_courier
+from urls import Urls
+from data import TestData
 
 
 @allure.feature('Courier Login')
 class TestCourierLogin:
     @allure.title('Successful login')
-    def test_login_success(self):
-        courier = register_new_courier()
-        response = login_courier(courier['login'], courier['password'])
-        assert response.status_code == 200
-        assert "id" in response.json()
-
-        delete_courier(response.json()['id'])
+    def test_login_success(self, authenticated_courier):
+        # Фикстура уже выполнила вход, просто проверяем
+        assert authenticated_courier["id"] > 0
 
     @allure.title('Login without required fields')
     @pytest.mark.parametrize('field', ['login', 'password'])
@@ -22,11 +19,11 @@ class TestCourierLogin:
         del payload[field]
 
         response = requests.post(
-            'https://qa-scooter.praktikum-services.ru/api/v1/courier/login',
+            Urls.LOGIN_COURIER,
             data=payload
         )
         assert response.status_code == 400
-        assert "недостаточно данных" in response.json()["message"]
+        assert TestData.LOGIN_MISSING_DATA in response.json()["message"]
 
     @allure.title('Login with invalid credentials')
     @pytest.mark.parametrize('login,password,expected', [
@@ -35,11 +32,9 @@ class TestCourierLogin:
         ('nonexistent', 'user', 404)
     ])
     def test_login_invalid_credentials(self, login, password, expected):
-        courier = register_new_courier()
-        response = login_courier(login, password)
+        response = requests.post(
+            Urls.LOGIN_COURIER,
+            data={"login": login, "password": password}
+        )
         assert response.status_code == expected
-        assert "Учетная запись не найдена" in response.json()["message"]
-
-        login_resp = login_courier(courier['login'], courier['password'])
-        if login_resp.status_code == 200:
-            delete_courier(login_resp.json()['id'])
+        assert TestData.ACCOUNT_NOT_FOUND in response.json()["message"]
